@@ -1,0 +1,40 @@
+
+name: Test Docker MCP GLPI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Télécharger l'image Docker
+        run: docker pull ghcr.io/echerarhihamza/skills-mcp-glpi:latest
+
+      - name: Démarrer le serveur MCP
+        run: |
+          docker run -d \
+            --name mcp-test \
+            -p 127.0.0.1:8824:8824 \
+            -e GLPI_BASE_URL=http://127.0.0.1:9999 \
+            -e GLPI_APP_TOKEN=dummy \
+            -e GLPI_USER_TOKEN=dummy \
+            -e GLPI_READ_ONLY=true \
+            ghcr.io/echerarhihamza/skills-mcp-glpi:latest
+
+      - name: Vérifier le démarrage
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8824/health; then
+              echo "Serveur MCP démarré avec succès"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mcp-test
+          exit 1
+
+      - name: Afficher les logs
+        if: always()
+        run: docker logs mcp-test
